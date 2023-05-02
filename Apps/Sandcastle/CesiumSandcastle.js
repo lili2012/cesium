@@ -690,10 +690,8 @@ require({
     ) {
       bucketWaiting = false;
       const bucketDoc = bucketFrame.contentDocument;
-      if (
-        local.headers.substring(0, local.emptyBucket.length) !==
-        local.emptyBucket
-      ) {
+      const substr = local.headers.substring(0, local.emptyBucket.length);
+      if ( substr !== local.emptyBucket ) {
         appendConsole(
           "consoleError",
           `Error, first part of ${local.bucketName} must match first part of bucket.html exactly.`,

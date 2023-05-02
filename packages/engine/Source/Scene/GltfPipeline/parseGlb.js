@@ -50,6 +50,66 @@ function readHeader(glb, byteOffset, count) {
   return header;
 }
 
+function fixGltf(gltf) {
+  if (!gltf.extensionsUsed) {
+      return;
+  }
+
+  var v = gltf.extensionsUsed.indexOf('KHR_technique_webgl');
+  var t = gltf.extensionsRequired.indexOf('KHR_technique_webgl');
+  // 中招了。。
+  if (v !== -1) {
+      gltf.extensionsRequired.splice(t, 1, 'KHR_techniques_webgl');
+      gltf.extensionsUsed.splice(v, 1, 'KHR_techniques_webgl');
+      gltf.extensions = gltf.extensions || {};
+      gltf.extensions['KHR_techniques_webgl'] = {};
+      gltf.extensions['KHR_techniques_webgl'].programs = gltf.programs;
+      gltf.extensions['KHR_techniques_webgl'].shaders = gltf.shaders;
+      gltf.extensions['KHR_techniques_webgl'].techniques = gltf.techniques;
+      var techniques = gltf.extensions['KHR_techniques_webgl'].techniques;
+
+      gltf.materials.forEach(function (mat, index) {
+        gltf.materials[index].extensions={};
+        gltf.materials[index].extensions['KHR_technique_webgl']={};
+        gltf.materials[index].extensions['KHR_technique_webgl'].values={};
+          gltf.materials[index].extensions['KHR_technique_webgl'].values = gltf.materials[index].values;
+          gltf.materials[index].extensions['KHR_techniques_webgl'] = gltf.materials[index].extensions['KHR_technique_webgl'];
+
+          var vtxfMaterialExtension = gltf.materials[index].extensions['KHR_techniques_webgl'];
+          vtxfMaterialExtension.technique = 0;
+          for (var value in vtxfMaterialExtension.values) {
+              //var us = techniques[vtxfMaterialExtension.technique].uniforms;
+              var us = techniques[0].uniforms;
+              for (var key in us) {
+                  if (us[key] === value) {
+                      vtxfMaterialExtension.values[key] = vtxfMaterialExtension.values[value];
+                      delete vtxfMaterialExtension.values[value];
+                      break;
+                  }
+              }
+          };
+      });
+
+      techniques.forEach(function (t) {
+          for (var attribute in t.attributes) {
+              var name = t.attributes[attribute];
+              t.attributes[attribute] = t.parameters[name];
+          };
+
+          for (var uniform in t.uniforms) {
+              var name = t.uniforms[uniform];
+              t.uniforms[uniform] = t.parameters[name];
+          };
+      });
+  }
+
+  delete gltf.materials[0].technique;
+  delete gltf.materials[0].values;
+  delete gltf.programs;
+  delete gltf.shaders;
+  delete gltf.techniques;
+}
+
 function parseGlbVersion1(glb, header) {
   const length = header[2];
   const contentLength = header[3];
@@ -102,6 +162,49 @@ function parseGlbVersion2(glb, header) {
     if (chunkType === 0x4e4f534a) {
       const jsonString = getStringFromTypedArray(chunkBuffer);
       gltf = JSON.parse(jsonString);
+      fixGltf(gltf);
+      // let hasKHR_techniques_webgl = false;
+      // if(gltf.extensionsRequired){
+      //   const n = gltf.extensionsRequired.length;
+      //   for(let i = 0; i< n; i++){
+      //     if(gltf.extensionsRequired[i] === 'KHR_technique_webgl'){
+      //       gltf.extensionsRequired[i]='KHR_techniques_webgl';
+      //       hasKHR_techniques_webgl = true;
+      //     }
+      //   }
+      // }
+      // if(gltf.extensionsUsed){
+      //   const n = gltf.extensionsUsed.length;
+      //   for(let i = 0; i< n; i++){
+      //     if(gltf.extensionsUsed[i] === 'KHR_technique_webgl'){
+      //       gltf.extensionsUsed[i]='KHR_techniques_webgl';
+      //       hasKHR_techniques_webgl = true;
+      //     }
+      //   }
+      // }
+
+      // if(hasKHR_techniques_webgl){
+      //   const material0 = gltf.materials[0];
+      //   material0.extensions={};
+      //   material0.extensions.KHR_techniques_webgl={};
+      //   material0.extensions.KHR_techniques_webgl.technique=material0.technique;
+      //   material0.extensions.KHR_techniques_webgl.values=gltf.materials[0].values;
+      //   delete material0.technique;
+      //   delete material0.values;
+
+      //   const KHR_techniques_webgl ={};
+      //   KHR_techniques_webgl.programs= gltf.programs;
+      //   KHR_techniques_webgl.shaders= gltf.shaders;
+      //   KHR_techniques_webgl.techniques = gltf.techniques;
+      //   gltf.extensions={};
+      //   gltf.extensions.KHR_techniques_webgl = KHR_techniques_webgl;
+      //   delete gltf.programs;
+      //   delete gltf.shaders;
+      //   delete gltf.techniques;
+      // }
+      // console.log(JSON.stringify(gltf));
+
+
       addPipelineExtras(gltf);
     }
     // Load Binary chunk

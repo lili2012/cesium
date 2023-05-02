@@ -402,6 +402,18 @@ function Context(canvas, options) {
  * @property {WebGLOptions} [webgl] WebGL options to be passed on to canvas.getContext
  * @property {Function} [getWebGLStub] A function to create a WebGL stub for testing
  */
+function throwOnGLError(err, funcName, args) {
+  throw WebGLDebugUtils.glEnumToString(err) + " was caused by call to: " + funcName;
+};
+
+function validateNoneOfTheArgsAreUndefined(functionName, args) {
+  for (var ii = 0; ii < args.length; ++ii) {
+    if (args[ii] === undefined) {
+      console.error("undefined passed to gl." + functionName + "(" +
+                     WebGLDebugUtils.glFunctionArgsToString(functionName, args) + ")");
+    }
+  }
+} 
 
 /**
  * @private
@@ -424,7 +436,10 @@ function getWebGLContext(canvas, webglOptions, requestWebgl1) {
   }
 
   const contextType = requestWebgl1 ? "webgl" : "webgl2";
-  const glContext = canvas.getContext(contextType, webglOptions);
+  let glContext = canvas.getContext(contextType, webglOptions);
+
+
+  //glContext = WebGLDebugUtils.makeDebugContext(glContext, throwOnGLError, validateNoneOfTheArgsAreUndefined);
 
   if (!defined(glContext)) {
     throw new RuntimeError(

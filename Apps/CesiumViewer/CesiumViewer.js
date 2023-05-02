@@ -20,6 +20,9 @@ import {
   Viewer,
   viewerCesiumInspectorMixin,
   viewerDragDropMixin,
+  HeadingPitchRange,
+  Cesium3DTileset,
+  Math,
 } from "../../Build/CesiumUnminified/index.js";
 
 async function main() {
@@ -61,18 +64,40 @@ async function main() {
 
   let viewer;
   try {
-    viewer = new Viewer("cesiumContainer", {
-      baseLayer: baseLayer,
-      baseLayerPicker: hasBaseLayerPicker,
-      scene3DOnly: endUserOptions.scene3DOnly,
-      requestRenderMode: true,
-      terrain: terrain,
-    });
+    // viewer = new Viewer("cesiumContainer", {
+    //   baseLayer: baseLayer,
+    //   baseLayerPicker: hasBaseLayerPicker,
+    //   scene3DOnly: endUserOptions.scene3DOnly,
+    //   requestRenderMode: true,
+    //   terrain: terrain,
+    // });
 
-    if (hasBaseLayerPicker) {
-      const viewModel = viewer.baseLayerPicker.viewModel;
-      viewModel.selectedTerrain = viewModel.terrainProviderViewModels[1];
-    }
+    // if (hasBaseLayerPicker) {
+    //   const viewModel = viewer.baseLayerPicker.viewModel;
+    //   viewModel.selectedTerrain = viewModel.terrainProviderViewModels[1];
+    // }
+    // For more information on Cesium World Terrain, see https://cesium.com/platform/cesium-ion/content/cesium-world-terrain/
+const viewer = new Viewer("cesiumContainer", {
+  terrain: Terrain.fromWorldTerrain(),
+});
+
+// Create the tileset, and set its model matrix to move it
+// to a certain position on the globe
+const tileset = viewer.scene.primitives.add(
+  new Cesium3DTileset({
+    url: "http://localhost:5500/tileset.json",
+    debugShowBoundingVolume: false,
+  })
+);
+
+// Zoom to the tileset, with a small offset so that it
+// is fully visible
+const offset = new HeadingPitchRange(
+  Math.toRadians(-45.0),
+  Math.toRadians(-45.0),
+  1000.0
+);
+viewer.zoomTo(tileset, offset);
   } catch (exception) {
     loadingIndicator.style.display = "none";
     const message = formatError(exception);
